@@ -74,7 +74,7 @@ void AudioCallback(void *data,Uint8 *stream,int len){
 void Init(SDL_bool vsynch){
     SDL_Init(SDL_INIT_VIDEO|SDL_INIT_EVENTS|SDL_INIT_TIMER|SDL_INIT_AUDIO);
     window=SDL_CreateWindow("Chattutti",SDL_WINDOWPOS_UNDEFINED,SDL_WINDOWPOS_UNDEFINED,winx,winy,SDL_WINDOW_SHOWN|SDL_WINDOW_RESIZABLE);
-    renderer=SDL_CreateRenderer(window,-1,SDL_RENDERER_ACCELERATED|SDL_RENDERER_PRESENTVSYNC);
+    renderer=SDL_CreateRenderer(window,-1,SDL_RENDERER_ACCELERATED);//|SDL_RENDERER_PRESENTVSYNC);
     if(TTF_Init()==-1)exit(EXIT_FAILURE);
     font1=TTF_OpenFont("data/font1.ttf",text1size);
     if(!font1)exit(EXIT_FAILURE);
