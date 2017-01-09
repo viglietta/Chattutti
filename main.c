@@ -33,6 +33,7 @@ Uint32 chatwavelen,bellwavelen;
 Uint8 *audiopos=NULL;
 Uint32 audiolen=0;
 SDL_bool quit=SDL_FALSE;
+SDL_TimerID TimerID;
 FILE *file;
 
 #define MAX_INPUT_LEN 200
@@ -71,6 +72,22 @@ void AudioCallback(void *data,Uint8 *stream,int len){
     audiolen-=len;
 }
 
+Uint32 UpdateCallback(Uint32 t,void *p){
+    SDL_Event e;
+    SDL_UserEvent u;
+
+    u.type=SDL_USEREVENT;
+    u.code=0;
+    u.data1=NULL;
+    u.data2=NULL;
+
+    e.type=SDL_USEREVENT;
+    e.user=u;
+
+    SDL_PushEvent(&e);
+    return(t);
+}
+
 void Init(SDL_bool vsynch){
     SDL_Init(SDL_INIT_VIDEO|SDL_INIT_EVENTS|SDL_INIT_TIMER|SDL_INIT_AUDIO);
     window=SDL_CreateWindow("Chattutti",SDL_WINDOWPOS_UNDEFINED,SDL_WINDOWPOS_UNDEFINED,winx,winy,SDL_WINDOW_SHOWN|SDL_WINDOW_RESIZABLE);
@@ -96,9 +113,11 @@ void Init(SDL_bool vsynch){
     InitNetwork();
     SDL_StartTextInput();
     SDL_ShowCursor(SDL_DISABLE);
+    TimerID=SDL_AddTimer(UpdateTime,UpdateCallback,NULL);
 }
 
 void Quit(){
+    SDL_RemoveTimer(TimerID);
     SDL_StopTextInput();
     DoneNetwork();
     fclose(file);
@@ -834,12 +853,17 @@ void MouseWheel(SDL_MouseWheelEvent *wheel){
 //    //CameraRotate(rad(motion->xrel)*0.1,rad(-motion->yrel)*0.1);
 //}
 
+void MainLoop();
+
 void Events(){
     SDL_Event e;
-    while(SDL_PollEvent(&e)){
+    if(SDL_WaitEvent(&e)){
         switch(e.type){
         case SDL_QUIT:
             quit=SDL_TRUE;
+            break;
+        case SDL_USEREVENT:
+            MainLoop();
             break;
         case SDL_WINDOWEVENT:
             WindowEvent(&e.window);
@@ -982,15 +1006,9 @@ int EventFilter(void *data,SDL_Event *event){
     if(event->type==SDL_WINDOWEVENT){
         if(event->window.event==SDL_WINDOWEVENT_RESIZED){
             Events();
-            UpdateState();
-            UpdateNetwork(ReadTimeCritical,ProcessTimeCritical,WriteTimeCritical,ExecuteMessage);
-            Render();
         }
         if(event->window.event==SDL_WINDOWEVENT_MOVED){
             Events();
-            UpdateState();
-            UpdateNetwork(ReadTimeCritical,ProcessTimeCritical,WriteTimeCritical,ExecuteMessage);
-            Render();
         }
     }
     return(1);
@@ -1005,6 +1023,12 @@ void PickColor(){
     Uint8 hash=5381%256;
     while((n=*str++))hash=((hash<<5)+hash)+n;
     hsv2rgb(hash+rand()%256,192,&color.r,&color.g,&color.b);
+}
+
+void MainLoop(){
+    UpdateState();
+    UpdateNetwork(ReadTimeCritical,ProcessTimeCritical,WriteTimeCritical,ExecuteMessage);
+    Render();
 }
 
 int main(int argc,char *argv[]){
@@ -1033,10 +1057,6 @@ int main(int argc,char *argv[]){
     InitState();
     while(!quit){
         Events();
-        UpdateState();
-        UpdateNetwork(ReadTimeCritical,ProcessTimeCritical,WriteTimeCritical,ExecuteMessage);
-        Render();
-        SDL_Delay(10);
     }
     Quit();
     return(EXIT_SUCCESS);

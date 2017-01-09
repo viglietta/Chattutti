@@ -8,6 +8,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#define UpdateTime 10
 #define DTIME (1000.0/60.0)
 
 #include "bitpack.h"
