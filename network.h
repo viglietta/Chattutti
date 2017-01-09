@@ -1,5 +1,4 @@
-//#define SERVER_IP "72.141.247.196" //home
-#define SERVER_IP "88.198.124.71" // informateci
+#define SERVER_IP "88.198.124.71"
 #define SERVER_PORT 25612
 
 #define NETWORK_MAX_CONNECTIONS 16
