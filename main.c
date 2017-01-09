@@ -1036,7 +1036,7 @@ int main(int argc,char *argv[]){
         UpdateState();
         UpdateNetwork(ReadTimeCritical,ProcessTimeCritical,WriteTimeCritical,ExecuteMessage);
         Render();
-        SDL_Delay(15);
+        SDL_Delay(10);
     }
     Quit();
     return(EXIT_SUCCESS);
