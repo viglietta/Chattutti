@@ -34,6 +34,8 @@ Uint8 *audiopos=NULL;
 Uint32 audiolen=0;
 SDL_bool quit=SDL_FALSE;
 SDL_TimerID TimerID;
+SDL_atomic_t refresh_events; // used for UpdateCallback
+SDL_mutex *refresh_mutex; // used for EventFilter
 FILE *file;
 
 #define MAX_INPUT_LEN 200
@@ -73,18 +75,20 @@ void AudioCallback(void *data,Uint8 *stream,int len){
 }
 
 Uint32 UpdateCallback(Uint32 t,void *p){
-    SDL_Event e;
-    SDL_UserEvent u;
+    if(SDL_AtomicCAS(&refresh_events,0,1)){
+        SDL_Event e;
+        SDL_UserEvent u;
 
-    u.type=SDL_USEREVENT;
-    u.code=0;
-    u.data1=NULL;
-    u.data2=NULL;
+        u.type=SDL_USEREVENT;
+        u.code=0;
+        u.data1=NULL;
+        u.data2=NULL;
 
-    e.type=SDL_USEREVENT;
-    e.user=u;
+        e.type=SDL_USEREVENT;
+        e.user=u;
 
-    SDL_PushEvent(&e);
+        SDL_PushEvent(&e);
+    }
     return(t);
 }
 
@@ -113,11 +117,14 @@ void Init(SDL_bool vsynch){
     InitNetwork();
     SDL_StartTextInput();
     SDL_ShowCursor(SDL_DISABLE);
+    SDL_AtomicSet(&refresh_events,0);
+    refresh_mutex=SDL_CreateMutex();
     TimerID=SDL_AddTimer(UpdateTime,UpdateCallback,NULL);
 }
 
 void Quit(){
     SDL_RemoveTimer(TimerID);
+    SDL_DestroyMutex(refresh_mutex);
     SDL_StopTextInput();
     DoneNetwork();
     fclose(file);
@@ -1004,11 +1011,41 @@ void ExecuteMessage(Connection *connection,void *data,Uint32 len){
 
 int EventFilter(void *data,SDL_Event *event){
     if(event->type==SDL_WINDOWEVENT){
-        if(event->window.event==SDL_WINDOWEVENT_RESIZED){
-            Events();
-        }
-        if(event->window.event==SDL_WINDOWEVENT_MOVED){
-            Events();
+        if(event->window.event==SDL_WINDOWEVENT_RESIZED || event->window.event==SDL_WINDOWEVENT_MOVED){
+            if(SDL_LockMutex(refresh_mutex)==0){
+                SDL_Event e;
+                while(SDL_PollEvent(&e)){
+                    switch(e.type){
+                    case SDL_QUIT:
+                        quit=SDL_TRUE;
+                        break;
+                    case SDL_WINDOWEVENT:
+                        WindowEvent(&e.window);
+                        break;
+                    case SDL_TEXTINPUT:
+                        AddKey(e.text.text);
+                        break;
+                    case SDL_KEYDOWN:
+                        KeyPressed(e.key.keysym.sym);
+                        break;
+                    case SDL_KEYUP:
+                        KeyReleased(e.key.keysym.sym);
+                        break;
+                    case SDL_MOUSEBUTTONDOWN:
+                        MousePressed(&e.button);
+                        break;
+                    case SDL_MOUSEWHEEL:
+                        MouseWheel(&e.wheel);
+                        break;
+            //        case SDL_MOUSEMOTION:
+            //            MouseMoved(&e.motion);
+            //            break;
+                    }
+                }
+                MainLoop();
+                SDL_UnlockMutex(refresh_mutex);
+            }
+            else exit(EXIT_FAILURE);
         }
     }
     return(1);
@@ -1026,6 +1063,7 @@ void PickColor(){
 }
 
 void MainLoop(){
+    SDL_AtomicSet(&refresh_events,0);
     UpdateState();
     UpdateNetwork(ReadTimeCritical,ProcessTimeCritical,WriteTimeCritical,ExecuteMessage);
     Render();
@@ -1056,7 +1094,11 @@ int main(int argc,char *argv[]){
     FlushEvents();
     InitState();
     while(!quit){
-        Events();
+        if(SDL_LockMutex(refresh_mutex)==0){
+            Events();
+            SDL_UnlockMutex(refresh_mutex);
+        }
+        else exit(EXIT_FAILURE);
     }
     Quit();
     return(EXIT_SUCCESS);
