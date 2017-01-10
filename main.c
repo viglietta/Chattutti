@@ -35,7 +35,9 @@ Uint32 audiolen=0;
 SDL_bool quit=SDL_FALSE;
 SDL_TimerID TimerID;
 SDL_atomic_t refresh_events; // used for UpdateCallback
+#ifdef WIN32
 SDL_mutex *refresh_mutex; // used for EventFilter
+#endif // WIN32
 FILE *file;
 
 #define MAX_INPUT_LEN 200
@@ -118,13 +120,17 @@ void Init(SDL_bool vsynch){
     SDL_StartTextInput();
     SDL_ShowCursor(SDL_DISABLE);
     SDL_AtomicSet(&refresh_events,0);
+    #ifdef WIN32
     refresh_mutex=SDL_CreateMutex();
+    #endif // WIN32
     TimerID=SDL_AddTimer(UpdateTime,UpdateCallback,NULL);
 }
 
 void Quit(){
     SDL_RemoveTimer(TimerID);
+    #ifdef WIN32
     SDL_DestroyMutex(refresh_mutex);
+    #endif // WIN32
     SDL_StopTextInput();
     DoneNetwork();
     fclose(file);
@@ -1009,6 +1015,7 @@ void ExecuteMessage(Connection *connection,void *data,Uint32 len){
     }
 }
 
+#ifdef WIN32
 int EventFilter(void *data,SDL_Event *event){
     if(event->type==SDL_WINDOWEVENT){
         if(event->window.event==SDL_WINDOWEVENT_RESIZED || event->window.event==SDL_WINDOWEVENT_MOVED){
@@ -1050,6 +1057,7 @@ int EventFilter(void *data,SDL_Event *event){
     }
     return(1);
 }
+#endif // WIN32
 
 #include <time.h>
 void PickColor(){
@@ -1094,11 +1102,15 @@ int main(int argc,char *argv[]){
     FlushEvents();
     InitState();
     while(!quit){
+        #ifdef WIN32
         if(SDL_LockMutex(refresh_mutex)==0){
+        #endif // WIN32
             Events();
+        #ifdef WIN32
             SDL_UnlockMutex(refresh_mutex);
         }
         else exit(EXIT_FAILURE);
+        #endif // WIN32
     }
     Quit();
     return(EXIT_SUCCESS);
