@@ -1014,35 +1014,6 @@ int EventFilter(void *data,SDL_Event *event){
     if(event->type==SDL_WINDOWEVENT){
         if(event->window.event==SDL_WINDOWEVENT_RESIZED || event->window.event==SDL_WINDOWEVENT_MOVED){
             if(SDL_LockMutex(refresh_mutex)==0){
-                SDL_Event e;
-                while(SDL_PollEvent(&e)){
-                    switch(e.type){
-                    case SDL_QUIT:
-                        quit=SDL_TRUE;
-                        break;
-                    case SDL_WINDOWEVENT:
-                        WindowEvent(&e.window);
-                        break;
-                    case SDL_TEXTINPUT:
-                        AddKey(e.text.text);
-                        break;
-                    case SDL_KEYDOWN:
-                        KeyPressed(e.key.keysym.sym);
-                        break;
-                    case SDL_KEYUP:
-                        KeyReleased(e.key.keysym.sym);
-                        break;
-                    case SDL_MOUSEBUTTONDOWN:
-                        MousePressed(&e.button);
-                        break;
-                    case SDL_MOUSEWHEEL:
-                        MouseWheel(&e.wheel);
-                        break;
-            //        case SDL_MOUSEMOTION:
-            //            MouseMoved(&e.motion);
-            //            break;
-                    }
-                }
                 MainLoop();
                 SDL_UnlockMutex(refresh_mutex);
             }
