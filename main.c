@@ -34,7 +34,7 @@ Uint8 *audiopos=NULL;
 Uint32 audiolen=0;
 SDL_bool quit=SDL_FALSE;
 SDL_TimerID TimerID;
-SDL_atomic_t refresh_events; // used for UpdateCallback
+SDL_mutex *update_mutex; SDL_bool to_update; // used for UpdateCallback
 #ifdef WIN32
 SDL_mutex *refresh_mutex; // used for EventFilter
 #endif // WIN32
@@ -77,20 +77,27 @@ void AudioCallback(void *data,Uint8 *stream,int len){
 }
 
 Uint32 UpdateCallback(Uint32 t,void *p){
-    if(SDL_AtomicCAS(&refresh_events,0,1)){
-        SDL_Event e;
-        SDL_UserEvent u;
+    if(SDL_LockMutex(update_mutex)==0){
+        if(!to_update){
+            to_update=SDL_TRUE;
+            SDL_UnlockMutex(update_mutex);
 
-        u.type=SDL_USEREVENT;
-        u.code=0;
-        u.data1=NULL;
-        u.data2=NULL;
+            SDL_Event e;
+            SDL_UserEvent u;
 
-        e.type=SDL_USEREVENT;
-        e.user=u;
+            u.type=SDL_USEREVENT;
+            u.code=0;
+            u.data1=NULL;
+            u.data2=NULL;
 
-        SDL_PushEvent(&e);
+            e.type=SDL_USEREVENT;
+            e.user=u;
+
+            SDL_PushEvent(&e);
+        }
+        else SDL_UnlockMutex(update_mutex);
     }
+    else exit(EXIT_FAILURE);
     return(t);
 }
 
@@ -119,10 +126,11 @@ void Init(SDL_bool vsynch){
     InitNetwork();
     SDL_StartTextInput();
     SDL_ShowCursor(SDL_DISABLE);
-    SDL_AtomicSet(&refresh_events,0);
     #ifdef WIN32
     refresh_mutex=SDL_CreateMutex();
     #endif // WIN32
+    update_mutex=SDL_CreateMutex();
+    to_update=SDL_FALSE;
     TimerID=SDL_AddTimer(UpdateTime,UpdateCallback,NULL);
 }
 
@@ -131,6 +139,7 @@ void Quit(){
     #ifdef WIN32
     SDL_DestroyMutex(refresh_mutex);
     #endif // WIN32
+    SDL_DestroyMutex(update_mutex);
     SDL_StopTextInput();
     DoneNetwork();
     fclose(file);
@@ -1071,7 +1080,11 @@ void PickColor(){
 }
 
 void MainLoop(){
-    SDL_AtomicSet(&refresh_events,0);
+    if(SDL_LockMutex(update_mutex)==0){
+        to_update=SDL_FALSE;
+        SDL_UnlockMutex(update_mutex);
+    }
+    else exit(EXIT_FAILURE);
     UpdateState();
     UpdateNetwork(ReadTimeCritical,ProcessTimeCritical,WriteTimeCritical,ExecuteMessage);
     Render();
