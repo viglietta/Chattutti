@@ -34,7 +34,8 @@ Uint8 *audiopos=NULL;
 Uint32 audiolen=0;
 SDL_bool quit=SDL_FALSE;
 SDL_TimerID TimerID;
-SDL_mutex *update_mutex; SDL_bool to_update; // used for UpdateCallback
+//SDL_mutex *update_mutex;
+SDL_bool to_update; // used for UpdateCallback
 #ifdef WIN32
 SDL_mutex *refresh_mutex; // used for EventFilter
 #endif // WIN32
@@ -77,10 +78,10 @@ void AudioCallback(void *data,Uint8 *stream,int len){
 }
 
 Uint32 UpdateCallback(Uint32 t,void *p){
-    if(SDL_LockMutex(update_mutex)==0){
+//    if(SDL_LockMutex(update_mutex)==0){
         if(!to_update){
             to_update=SDL_TRUE;
-            SDL_UnlockMutex(update_mutex);
+//            SDL_UnlockMutex(update_mutex);
 
             SDL_Event e;
             SDL_UserEvent u;
@@ -95,9 +96,9 @@ Uint32 UpdateCallback(Uint32 t,void *p){
 
             SDL_PushEvent(&e);
         }
-        else SDL_UnlockMutex(update_mutex);
-    }
-    else exit(EXIT_FAILURE);
+//        else SDL_UnlockMutex(update_mutex);
+//    }
+//    else exit(EXIT_FAILURE);
     return(t);
 }
 
@@ -129,7 +130,7 @@ void Init(SDL_bool vsynch){
     #ifdef WIN32
     refresh_mutex=SDL_CreateMutex();
     #endif // WIN32
-    update_mutex=SDL_CreateMutex();
+//    update_mutex=SDL_CreateMutex();
     to_update=SDL_FALSE;
     TimerID=SDL_AddTimer(UpdateTime,UpdateCallback,NULL);
 }
@@ -139,7 +140,7 @@ void Quit(){
     #ifdef WIN32
     SDL_DestroyMutex(refresh_mutex);
     #endif // WIN32
-    SDL_DestroyMutex(update_mutex);
+//    SDL_DestroyMutex(update_mutex);
     SDL_StopTextInput();
     DoneNetwork();
     fclose(file);
@@ -1080,11 +1081,11 @@ void PickColor(){
 }
 
 void MainLoop(){
-    if(SDL_LockMutex(update_mutex)==0){
+//    if(SDL_LockMutex(update_mutex)==0){
         to_update=SDL_FALSE;
-        SDL_UnlockMutex(update_mutex);
-    }
-    else exit(EXIT_FAILURE);
+//        SDL_UnlockMutex(update_mutex);
+//    }
+//    else exit(EXIT_FAILURE);
     UpdateState();
     UpdateNetwork(ReadTimeCritical,ProcessTimeCritical,WriteTimeCritical,ExecuteMessage);
     Render();
