@@ -78,23 +78,22 @@ void AudioCallback(void *data,Uint8 *stream,int len){
 }
 
 Uint32 UpdateCallback(Uint32 t,void *p){
-//    if(SDL_LockMutex(update_mutex)==0){
-//        if(!to_update){
-//            to_update=SDL_TRUE;
-//            SDL_UnlockMutex(update_mutex);
+    SDL_Event e[1024];
+    int n=SDL_PeepEvents(e,1024,SDL_PEEKEVENT,SDL_USEREVENT,SDL_USEREVENT);
+    if(n==0){
+        SDL_Event e;
+        SDL_UserEvent u;
 
-            SDL_Event e;
-            SDL_UserEvent u;
+        u.type=SDL_USEREVENT;
+        u.code=0;
+        u.data1=NULL;
+        u.data2=NULL;
 
-            u.type=SDL_USEREVENT;
-            u.code=0;
-            u.data1=NULL;
-            u.data2=NULL;
+        e.type=SDL_USEREVENT;
+        e.user=u;
 
-            e.type=SDL_USEREVENT;
-            e.user=u;
-
-            SDL_PushEvent(&e);
+        SDL_PushEvent(&e);
+    }
 //        }
 //        else SDL_UnlockMutex(update_mutex);
 //    }
