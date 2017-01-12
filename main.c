@@ -78,8 +78,8 @@ void AudioCallback(void *data,Uint8 *stream,int len){
 }
 
 Uint32 UpdateCallback(Uint32 t,void *p){
-    SDL_Event e[1024];
-    int n=SDL_PeepEvents(e,1024,SDL_PEEKEVENT,SDL_USEREVENT,SDL_USEREVENT);
+    SDL_Event ev[1024];
+    int n=SDL_PeepEvents(ev,1024,SDL_PEEKEVENT,SDL_USEREVENT,SDL_USEREVENT);
     if(n==0){
         SDL_Event e;
         SDL_UserEvent u;
